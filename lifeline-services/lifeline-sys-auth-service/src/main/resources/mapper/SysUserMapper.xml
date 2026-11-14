@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tianxin.lifeline.auth.mapper.SysUserMapper">
+
+    <!-- 按用户名查询未删除的用户 -->
+    <select id="selectByUsername" resultType="com.tianxin.lifeline.auth.entity.SysUser">
+        SELECT id, username, password, real_name, phone, email, status, dept_id,
+               created_at, updated_at, deleted
+        FROM sys_user
+        WHERE username = #{username}
+          AND deleted = 0
+        LIMIT 1
+    </select>
+</mapper>
