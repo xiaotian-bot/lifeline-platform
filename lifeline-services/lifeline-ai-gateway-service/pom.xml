@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.tianxin.lifeline</groupId>
+        <artifactId>lifeline-services</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>lifeline-ai-gateway-service</artifactId>
+
+    <name>lifeline-ai-gateway-service</name>
+    <description>AI能力网关服务（P8）：统一转发 ml-service/agent-service 的异常检测、趋势预报、智能研判、预案生成与问答能力，提供结果缓存、超时降级与批量推理（端口9009）</description>
+
+    <!--
+      依赖选型说明（与 MVC 体系的刻意隔离）：
+      1. 本服务基于 WebFlux（响应式）承载高并发 AI 转发，故不依赖 lifeline-common-web（MVC 全局异常处理/Jackson 配置），
+         也不依赖 lifeline-common-data（MyBatis-Plus 自动装配与响应式栈无关且引入多余依赖），Redis 直接使用
+         spring-boot-starter-data-redis 的 ReactiveStringRedisTemplate，无需 common-data 的 RedisTemplate 定制。
+      2. 依赖 lifeline-service-api 仅为复用共享 DTO（AnomalyRequestDTO 等）；其传递的 openfeign 依赖在本服务
+         无 @EnableFeignClients 装配，仅停留在类路径层面，不产生 Feign 代理（本服务是 Feign 契约的被调用方）。
+      3. forecast 落库采用 spring-boot-starter-jdbc + JdbcTemplate 直写 PG，不引入 MyBatis-Plus，保持栈最小化。
+    -->
+    <dependencies>
+        <!-- 响应式 Web 容器（WebFlux，注意：不与 spring-boot-starter-web 共存） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
+        <!-- Redis：结果缓存（使用 ReactiveStringRedisTemplate，非阻塞） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <!-- JDBC：forecast_report 直写 PostgreSQL -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <!-- PostgreSQL 驱动 -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+        </dependency>
+
+        <!-- 平台公共核心：统一响应体/错误码/雪花ID -->
+        <dependency>
+            <groupId>com.tianxin.lifeline</groupId>
+            <artifactId>lifeline-common-core</artifactId>
+        </dependency>
+        <!-- 服务间调用契约：仅复用共享 DTO（本服务为被调用方，不装配 Feign 客户端） -->
+        <dependency>
+            <groupId>com.tianxin.lifeline</groupId>
+            <artifactId>lifeline-service-api</artifactId>
+        </dependency>
+
+        <!-- Nacos 服务注册发现 -->
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>lifeline-ai-gateway-service</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
