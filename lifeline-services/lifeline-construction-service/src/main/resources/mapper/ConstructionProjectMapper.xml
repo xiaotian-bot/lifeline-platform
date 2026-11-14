@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tianxin.lifeline.construction.mapper.ConstructionProjectMapper">
+
+    <!-- 通用列（geom 为 PostGIS 列，不参与通用列，按需以空间函数读写） -->
+    <sql id="baseColumns">
+        id, project_name, location, contractor, supervisor, start_date, end_date,
+        status, created_at, updated_at, deleted
+    </sql>
+
+    <!-- 分页查询施工项目：LIMIT/OFFSET 与 COUNT 总数由 MyBatis-Plus 分页拦截器自动织入 -->
+    <select id="selectProjectPage" resultType="com.tianxin.lifeline.construction.entity.ConstructionProject">
+        SELECT <include refid="baseColumns"/>
+        FROM construction_project
+        <where>
+            deleted = 0
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+            <if test="area != null and area != ''">
+                AND (project_name LIKE CONCAT('%', #{area}, '%')
+                  OR location LIKE CONCAT('%', #{area}, '%')
+                  OR contractor LIKE CONCAT('%', #{area}, '%'))
+            </if>
+        </where>
+        ORDER BY created_at DESC, id DESC
+    </select>
+
+    <!-- 查询施工项目详情：geom 经 ST_AsText 输出 WKT，ST_X/ST_Y 分解经纬度 -->
+    <select id="selectDetailById" resultType="com.tianxin.lifeline.construction.dto.ProjectVO">
+        SELECT id, project_name, location, contractor, supervisor, start_date, end_date, status,
+               ST_AsText(geom) AS geom_wkt,
+               ST_X(geom) AS longitude,
+               ST_Y(geom) AS latitude,
+               created_at, updated_at
+        FROM construction_project
+        WHERE id = #{id}
+          AND deleted = 0
+    </select>
+
+    <!-- 新增施工项目（几何经 ST_GeomFromText 写入，EPSG:4326） -->
+    <insert id="insertProject">
+        INSERT INTO construction_project (id, project_name, location, contractor, supervisor,
+                                          start_date, end_date, status, geom,
+                                          created_at, updated_at, deleted)
+        VALUES (#{id}, #{projectName}, #{location}, #{contractor}, #{supervisor},
+                #{startDate}, #{endDate}, #{status},
+                <choose>
+                    <when test="geomWkt != null and geomWkt != ''">ST_GeomFromText(#{geomWkt}, 4326),</when>
+                    <otherwise>NULL,</otherwise>
+                </choose>
+                #{createdAt}, #{updatedAt}, 0)
+    </insert>
+
+    <!-- 更新施工项目（仅更新非空字段；geomWkt 非空时经 ST_GeomFromText 重写几何） -->
+    <update id="updateProject">
+        UPDATE construction_project
+        <set>
+            <if test="projectName != null">project_name = #{projectName},</if>
+            <if test="location != null">location = #{location},</if>
+            <if test="contractor != null">contractor = #{contractor},</if>
+            <if test="supervisor != null">supervisor = #{supervisor},</if>
+            <if test="startDate != null">start_date = #{startDate},</if>
+            <if test="endDate != null">end_date = #{endDate},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="geomWkt != null and geomWkt != ''">geom = ST_GeomFromText(#{geomWkt}, 4326),</if>
+            updated_at = #{updatedAt}
+        </set>
+        WHERE id = #{id}
+          AND deleted = 0
+    </update>
+
+    <!--
+        周边管线影响范围查询（复用 pipe-asset 空间模式）：
+        1. anchor CTE 取施工项目点位几何；
+        2. GiST 边界框预过滤：geom && ST_Buffer(geography 半径缓冲)::geometry，
+           走 pipe_main geom GiST 索引，避免全表球面距离计算；
+        3. ST_DWithin geography 精确判定半径（米）；
+        4. ST_Distance geography 球面距离升序输出。
+        注：XML 中 && 运算符须转义为 &amp;&amp;。
+    -->
+    <select id="selectNearbyPipes" resultType="com.tianxin.lifeline.construction.dto.NearbyPipeVO">
+        WITH anchor AS (
+            SELECT geom AS g
+            FROM construction_project
+            WHERE id = #{projectId}
+              AND deleted = 0
+              AND geom IS NOT NULL
+        )
+        SELECT pm.id,
+               pm.pipe_code,
+               pm.pipe_name,
+               pm.pipe_type,
+               pm.status,
+               ST_Distance(pm.geom::geography, anchor.g::geography) AS distance_meters
+        FROM pipe_main pm, anchor
+        WHERE pm.deleted = 0
+          AND anchor.g IS NOT NULL
+          AND pm.geom &amp;&amp; ST_Buffer(anchor.g::geography, #{radiusMeters})::geometry
+          AND ST_DWithin(pm.geom::geography, anchor.g::geography, #{radiusMeters})
+        ORDER BY distance_meters
+        LIMIT #{limit}
+    </select>
+</mapper>
