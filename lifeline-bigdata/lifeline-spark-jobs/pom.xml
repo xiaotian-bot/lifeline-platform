@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.tianxin.lifeline</groupId>
+        <artifactId>lifeline-bigdata</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>lifeline-spark-jobs</artifactId>
+    <packaging>jar</packaging>
+
+    <name>lifeline-spark-jobs</name>
+    <description>
+        P10-1 Spark 离线计算作业集（Spark 3.5.x）：
+        DailyStatisticsJob（日统计）/ WeeklyTrendJob（隐患趋势）/
+        TrainingDatasetJob（训练数据集生成）/ DataQualityJob（数据质量稽核）。
+        数据源：TDengine（pipe_ts：sensor_data / sensor_feature）与 PostgreSQL 业务表，
+        JDBC 直连，不引入重型连接器。每个作业独立 main 类，
+        maven-shade 打 fat-jar 后经 spark-submit 提交（本地模式 local[*] 亦可直跑）。
+    </description>
+
+    <properties>
+        <!-- Spark 版本（集群提供，scope=provided） -->
+        <spark.version>3.5.1</spark.version>
+        <!-- Hadoop AWS 连接器（TrainingDatasetJob 写 MinIO/S3 路径时使用，版本对齐 Spark 3.5 捆绑 Hadoop 3.3.4） -->
+        <hadoop-aws.version>3.3.4</hadoop-aws.version>
+        <!-- PostgreSQL JDBC 驱动（与 flink-jobs 对齐） -->
+        <postgresql.version>42.7.3</postgresql.version>
+    </properties>
+
+    <dependencies>
+        <!-- ==================== Spark 核心（集群提供，scope=provided） ==================== -->
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-core_2.12</artifactId>
+            <version>${spark.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-sql_2.12</artifactId>
+            <version>${spark.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- ==================== 平台内部模块（仅用常量，与 flink-jobs 一致） ==================== -->
+        <dependency>
+            <groupId>com.tianxin.lifeline</groupId>
+            <artifactId>lifeline-common-core</artifactId>
+        </dependency>
+
+        <!-- ==================== 运行时依赖（打入 fat-jar） ==================== -->
+        <!-- TDengine JDBC 驱动（版本由父 POM dependencyManagement 管理：3.2.7） -->
+        <dependency>
+            <groupId>com.taosdata.jdbc</groupId>
+            <artifactId>taos-jdbcdriver</artifactId>
+        </dependency>
+        <!-- PostgreSQL 驱动（统计结果写入） -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${postgresql.version}</version>
+        </dependency>
+        <!-- Hadoop S3A 连接器（TrainingDatasetJob 输出 MinIO/S3 路径时需要；本地/HDFS 输出不使用） -->
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-aws</artifactId>
+            <version>${hadoop-aws.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>${project.artifactId}-${project.version}</finalName>
+        <plugins>
+            <!--
+                maven-shade-plugin 打 fat-jar（与 flink-jobs 同一模式）：
+                1. provided scope 依赖（Spark 核心）天然不打入 jar；
+                2. ServicesResourceTransformer 合并 META-INF/services
+                   （JDBC 驱动 SPI 注册文件，缺失会导致 DriverManager 找不到驱动）；
+                3. 不写 Main-Class（四个作业独立 main，spark-submit 时经 -class 指定入口类）。
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.2.4</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <artifactSet>
+                                <excludes>
+                                    <!-- 双保险：显式排除 Spark 运行时组件 -->
+                                    <exclude>org.apache.spark:*</exclude>
+                                    <exclude>org.scala-lang:*</exclude>
+                                </excludes>
+                            </artifactSet>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                        <exclude>module-info.class</exclude>
+                                        <exclude>META-INF/versions/*/module-info.class</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer"/>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
