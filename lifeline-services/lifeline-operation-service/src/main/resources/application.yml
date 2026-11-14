@@ -1,0 +1,72 @@
+# ============================================================
+# 运维工单服务（operation-service）配置
+# 端口 9007，Nacos 注册名 operation-service
+# 职责：运维工单全生命周期状态机管理 / 巡检计划管理 /
+#       工单事件与处置反馈事件 Kafka 发布（供预警核销联动）
+# ============================================================
+server:
+  port: 9007
+
+spring:
+  application:
+    name: operation-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/lifeline
+    username: lifeline
+    password: lifeline123
+    driver-class-name: org.postgresql.Driver
+  # Spring Boot 3.x 下 Redis 配置前缀为 spring.data.redis
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:kafka:9094}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: lifeline-operation-group
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      max-poll-records: 500
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: DEFAULT_GROUP
+
+# JWT 校验配置（lifeline-common-security 的 JwtAuthFilter 使用，与签发密钥保持一致）
+lifeline:
+  security:
+    jwt:
+      secret: ${LIFELINE_JWT_SECRET:lifeline-platform-secret-key-2026-must-be-at-least-256-bits-long}
+      issuer: lifeline-platform
+  operation:
+    auto-dispatch:
+      # 预警自动派单开关：橙色及以上等级预警自动创建应急工单
+      enabled: true
+      # 幂等去重键 TTL（分钟）
+      idempotent-ttl-minutes: 10
+      # 预警事件时效阈值（分钟）：预警时间早于当前超过该值的事件跳过派单（防 earliest 回放建过期工单，0 关闭）
+      max-age-minutes: 30
+
+mybatis-plus:
+  mapper-locations: classpath:/mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.tianxin.lifeline.operation: info
