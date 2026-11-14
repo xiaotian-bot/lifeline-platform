@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.tianxin.lifeline</groupId>
+        <artifactId>lifeline-bigdata</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>lifeline-flink-jobs</artifactId>
+    <packaging>jar</packaging>
+
+    <name>lifeline-flink-jobs</name>
+    <description>
+        P6 Flink 实时链路作业集（Flink 1.18.1）：
+        SensorCleanJob（清洗去重）/ TDengineSinkJob（攒批入库）/
+        FeatureWindowJob（滑动窗口特征）/ RuleWarningJob（规则预警）。
+        每个作业独立 main 类，maven-shade 打 fat-jar 后独立提交。
+    </description>
+
+    <properties>
+        <!-- Flink Kafka 连接器版本（适配 Flink 1.18） -->
+        <flink-connector-kafka.version>3.1.0-1.18</flink-connector-kafka.version>
+        <!-- PostgreSQL JDBC 驱动（RuleWarningJob 读取 warning_rule 规则源） -->
+        <postgresql.version>42.7.3</postgresql.version>
+    </properties>
+
+    <dependencies>
+        <!-- ==================== Flink 核心（集群提供，scope=provided） ==================== -->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-streaming-java</artifactId>
+            <version>${flink.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-clients</artifactId>
+            <version>${flink.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-connector-kafka</artifactId>
+            <version>${flink-connector-kafka.version}</version>
+            <!-- Changed from 'provided' to compile scope to include in fat-jar -->
+        </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-connector-jdbc</artifactId>
+            <version>3.1.2-1.18</version>
+            <!-- Changed from 'provided' to compile scope to include in fat-jar -->
+        </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-cep</artifactId>
+            <version>${flink.version}</version>
+            <!-- Changed from 'provided' to compile scope to include in fat-jar -->
+        </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-statebackend-rocksdb</artifactId>
+            <version>${flink.version}</version>
+            <!-- Changed from 'provided' to compile scope to include in fat-jar -->
+        </dependency>
+
+        <!-- ==================== 平台内部模块（仅用 TopicConstants/PipeType/WarningLevel） ==================== -->
+        <dependency>
+            <groupId>com.tianxin.lifeline</groupId>
+            <artifactId>lifeline-common-core</artifactId>
+        </dependency>
+
+        <!-- ==================== 运行时依赖（打入 fat-jar） ==================== -->
+        <!-- Jackson：裸 JSON 解析与事件信封序列化（JavaTimeModule 对齐 common-mq 序列化口径） -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
+        <!-- Hutool：UUID 幂等键（与 EventEnvelope.of 使用的 IdUtil.fastSimpleUUID 一致） -->
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+        </dependency>
+        <!-- TDengine JDBC 驱动（TAOS-RS RESTful，TDengineSinkJob/FeatureWindowJob 写入） -->
+        <dependency>
+            <groupId>com.taosdata.jdbc</groupId>
+            <artifactId>taos-jdbcdriver</artifactId>
+        </dependency>
+        <!-- PostgreSQL 驱动（RuleWarningJob JDBC 规则源） -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${postgresql.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>${project.artifactId}-${project.version}</finalName>
+        <plugins>
+            <!--
+                maven-shade-plugin 打 fat-jar：
+                1. provided scope 依赖（Flink 核心）天然不打入 jar；
+                2. ServicesResourceTransformer 合并 META-INF/services
+                   （JDBC 驱动 SPI 注册文件，缺失会导致 DriverManager 找不到驱动）；
+                3. ManifestResourceTransformer 不写 Main-Class（四个作业独立 main，
+                   提交时通过 flink run -c 指定入口类）。
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.2.4</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <artifactSet>
+                                <excludes>
+                                    <!-- Exclude only Flink core runtime, keep connectors -->
+                                    <exclude>org.apache.flink:flink-streaming-java</exclude>
+                                    <exclude>org.apache.flink:flink-clients</exclude>
+                                    <exclude>org.apache.flink:flink-runtime</exclude>
+                                    <exclude>org.apache.flink:flink-core</exclude>
+                                    <exclude>org.apache.flink:flink-java</exclude>
+                                </excludes>
+                            </artifactSet>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                        <exclude>module-info.class</exclude>
+                                        <exclude>META-INF/versions/*/module-info.class</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer"/>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
