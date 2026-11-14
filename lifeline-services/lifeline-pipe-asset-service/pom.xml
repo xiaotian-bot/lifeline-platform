@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.tianxin.lifeline</groupId>
+        <artifactId>lifeline-services</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>lifeline-pipe-asset-service</artifactId>
+
+    <name>lifeline-pipe-asset-service</name>
+    <description>管网资产服务：管网/设备/井室台账、PostGIS空间查询、GeoJSON输出、一管一档</description>
+
+    <dependencies>
+        <!-- 平台公共模块 -->
+        <dependency>
+            <groupId>com.tianxin.lifeline</groupId>
+            <artifactId>lifeline-common-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.tianxin.lifeline</groupId>
+            <artifactId>lifeline-common-data</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.tianxin.lifeline</groupId>
+            <artifactId>lifeline-common-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.tianxin.lifeline</groupId>
+            <artifactId>lifeline-service-api</artifactId>
+        </dependency>
+
+        <!-- PostgreSQL 驱动（含 PostGIS 空间函数，经 ST_* SQL 调用） -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Nacos 服务注册发现 -->
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+        </dependency>
+
+        <!-- Actuator 健康检查端点 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>${project.artifactId}</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
