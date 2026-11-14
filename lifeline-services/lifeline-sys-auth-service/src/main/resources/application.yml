@@ -1,0 +1,57 @@
+# ============================================================
+# 系统用户权限服务（sys-auth-service）配置
+# 端口 9001，JWT双令牌认证（Access 2h / Refresh 7d）
+# ============================================================
+server:
+  port: 9001
+
+spring:
+  application:
+    name: sys-auth-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/lifeline
+    username: lifeline
+    password: lifeline123
+    driver-class-name: org.postgresql.Driver
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: DEFAULT_GROUP
+
+# JWT 签发配置（本服务签发令牌使用）
+jwt:
+  secret: lifeline-platform-secret-key-2026-must-be-at-least-256-bits-long
+  access-token-expire: 7200000
+  refresh-token-expire: 604800000
+  issuer: lifeline-platform
+
+# JWT 校验配置（lifeline-common-security 的 JwtAuthFilter 使用，与签发密钥保持一致）
+lifeline:
+  security:
+    jwt:
+      secret: ${LIFELINE_JWT_SECRET:lifeline-platform-secret-key-2026-must-be-at-least-256-bits-long}
+      issuer: lifeline-platform
+
+mybatis-plus:
+  mapper-locations: classpath:/mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.tianxin.lifeline.auth: info
