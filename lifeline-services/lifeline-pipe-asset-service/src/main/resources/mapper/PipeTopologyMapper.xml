@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tianxin.lifeline.asset.mapper.PipeTopologyMapper">
+
+    <!-- 查询与指定管网相关的全部拓扑关系（作为起点或终点） -->
+    <select id="selectByPipeId" resultType="com.tianxin.lifeline.asset.entity.PipeTopology">
+        SELECT id, from_pipe_id, to_pipe_id, from_node, to_node, relation_type,
+               created_at, updated_at, deleted
+        FROM pipe_topology
+        WHERE deleted = 0
+          AND (from_pipe_id = #{pipeId} OR to_pipe_id = #{pipeId})
+        ORDER BY id
+    </select>
+</mapper>
