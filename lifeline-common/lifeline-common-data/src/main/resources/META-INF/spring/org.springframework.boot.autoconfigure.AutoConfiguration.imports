@@ -1,0 +1,2 @@
+com.tianxin.lifeline.common.data.config.MybatisPlusConfig
+com.tianxin.lifeline.common.data.config.RedisConfig
