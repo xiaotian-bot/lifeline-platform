@@ -1,0 +1,72 @@
+# ============================================================
+# 预警预报服务（warning-service）配置
+# 端口 9004，Nacos 注册名 warning-service
+# 职责：规则判定预警 / 预警事件幂等落库 / 四级分级推送 / 预报与规则管理
+# ============================================================
+server:
+  port: 9004
+
+spring:
+  application:
+    name: warning-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/lifeline
+    username: lifeline
+    password: lifeline123
+    driver-class-name: org.postgresql.Driver
+  # Spring Boot 3.x 下 Redis 配置前缀为 spring.data.redis
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:kafka:9094}
+    consumer:
+      group-id: lifeline-warning-group
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      max-poll-records: 500
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: DEFAULT_GROUP
+
+# JWT 校验配置（lifeline-common-security 的 JwtAuthFilter 使用，与签发密钥保持一致）
+lifeline:
+  security:
+    jwt:
+      secret: ${LIFELINE_JWT_SECRET:lifeline-platform-secret-key-2026-must-be-at-least-256-bits-long}
+      issuer: lifeline-platform
+  # 预警服务业务参数
+  warning:
+    # 规则桥开关：true=warning-service 内置规则桥消费 pipe_sensor_raw（默认），
+    #            false=Flink RuleWarningJob 已接管，禁用本地规则桥（SensorRuleListener + SensorRawConsumerConfig 不加载）
+    rule-bridge:
+      enabled: true
+    # 规则缓存定时刷新间隔（毫秒）
+    rule-refresh-ms: 60000
+    # 同设备同指标预警抑制窗口（分钟）
+    suppress-minutes: 10
+    # 幂等去重键 TTL（分钟）
+    idempotent-ttl-minutes: 10
+
+mybatis-plus:
+  mapper-locations: classpath:/mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.tianxin.lifeline.warning: info
