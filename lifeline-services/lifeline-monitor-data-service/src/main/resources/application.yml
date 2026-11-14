@@ -1,0 +1,60 @@
+server:
+  port: 9003
+
+spring:
+  application:
+    name: monitor-data-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/lifeline
+    username: lifeline
+    password: lifeline123
+    driver-class-name: org.postgresql.Driver
+  # Spring Boot 3.x 下 Redis 配置前缀为 spring.data.redis
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:kafka:9094}
+    consumer:
+      group-id: monitor-data-group
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      max-poll-records: 500
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: DEFAULT_GROUP
+
+# TDengine独立配置（RESTful模式，独立DataSource + JdbcTemplate，不走MyBatis-Plus）
+tdengine:
+  url: jdbc:TAOS-REST://localhost:6041/pipe_ts
+  username: root
+  password: taosdata
+  batch-size: 2000
+  batch-interval-ms: 500
+
+mybatis-plus:
+  mapper-locations: classpath:/mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+# WebSocket 实时推送配置（P10-3，/ws/monitor/{areaId} 按区域订阅）
+lifeline:
+  monitor:
+    ws:
+      # 推送总开关（关闭后拒绝连接且写入侧不发布）
+      enabled: ${MONITOR_WS_ENABLED:true}
+      # 同区域同设备广播节流间隔（毫秒），每设备最多每 interval 一条
+      throttle-per-device-ms: ${MONITOR_WS_THROTTLE_MS:1000}
+      # 单区域会话数上限（连接数保护）
+      max-sessions-per-area: ${MONITOR_WS_MAX_SESSIONS_PER_AREA:200}
+      # 全服务会话总数上限（连接数保护）
+      max-total-sessions: ${MONITOR_WS_MAX_TOTAL_SESSIONS:2000}
+
+logging:
+  level:
+    com.tianxin.lifeline.monitor: info
