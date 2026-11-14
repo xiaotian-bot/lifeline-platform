@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tianxin.lifeline.warning.mapper.WarningEventMapper">
+
+    <!-- 按预警级别分组统计（groupKey：级别数值 1红/2橙/3黄/4蓝） -->
+    <select id="countGroupByLevel" resultType="java.util.Map">
+        SELECT warning_level AS group_key, COUNT(*) AS cnt
+        FROM warning_event
+        WHERE deleted = 0
+        GROUP BY warning_level
+        ORDER BY warning_level
+    </select>
+
+    <!-- 按管网类型分组统计（groupKey：管网类型编码） -->
+    <select id="countGroupByPipeType" resultType="java.util.Map">
+        SELECT pipe_type AS group_key, COUNT(*) AS cnt
+        FROM warning_event
+        WHERE deleted = 0
+        GROUP BY pipe_type
+        ORDER BY pipe_type
+    </select>
+
+    <!-- 按预警状态分组统计（groupKey：状态数值 0待确认/1已确认/2处置中/3已核销/4误报） -->
+    <select id="countGroupByStatus" resultType="java.util.Map">
+        SELECT status AS group_key, COUNT(*) AS cnt
+        FROM warning_event
+        WHERE deleted = 0
+        GROUP BY status
+        ORDER BY status
+    </select>
+</mapper>
