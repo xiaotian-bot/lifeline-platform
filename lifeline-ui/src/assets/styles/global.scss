@@ -1,0 +1,60 @@
+@use './reset.scss';
+
+// ==================== 通用工具类 ====================
+.flex {
+  display: flex;
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.page-container {
+  padding: $spacing-md;
+  background: #fff;
+  border-radius: $border-radius-lg;
+}
+
+.search-bar {
+  padding: $spacing-md;
+  margin-bottom: $spacing-md;
+  background: #fff;
+  border-radius: $border-radius-lg;
+}
+
+// ==================== 过渡动画 ====================
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.28s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+// 侧边栏展开/收起动画
+.sidebar-fade-enter-active,
+.sidebar-fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.sidebar-fade-enter-from,
+.sidebar-fade-leave-to {
+  transform: translateX(-10px);
+  opacity: 0;
+}
