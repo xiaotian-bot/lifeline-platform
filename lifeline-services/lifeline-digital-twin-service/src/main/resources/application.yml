@@ -1,0 +1,52 @@
+# ============================================================
+# 数字孪生聚合服务（digital-twin-service）配置
+# 端口 9010，Nacos 注册名 digital-twin-service
+# 职责：模型数据聚合（pipe-asset Feign + Caffeine L1）/
+#       实时映射（Redis Pipeline 批量读 rt:{deviceId}）/
+#       预警定位（warning Feign + 资产位置 + 实时值拼装）/
+#       仿真推演（异步线程池规则推演，任务状态 Redis 承载）
+# 纯聚合编排型服务：只读拼装既有服务能力，不自建存储、不落 PG 业务表
+# ============================================================
+server:
+  port: 9010
+
+spring:
+  application:
+    name: digital-twin-service
+  # Spring Boot 3.x 下 Redis 配置前缀为 spring.data.redis
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: DEFAULT_GROUP
+
+# JWT 校验配置（lifeline-common-security 的 JwtAuthFilter 使用，与签发密钥保持一致）
+lifeline:
+  security:
+    jwt:
+      secret: ${LIFELINE_JWT_SECRET:lifeline-platform-secret-key-2026-must-be-at-least-256-bits-long}
+      issuer: lifeline-platform
+  # 数字孪生聚合服务业务参数
+  twin:
+    # 实时映射单次批量上限（超限分页处理）
+    realtime-batch-size: 500
+    # 仿真任务状态 Redis TTL（分钟）
+    simulation-ttl-minutes: 30
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.tianxin.lifeline.twin: info
