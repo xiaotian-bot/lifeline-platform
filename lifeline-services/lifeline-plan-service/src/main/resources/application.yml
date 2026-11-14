@@ -1,0 +1,65 @@
+# ============================================================
+# 预案处置服务（plan-service）配置
+# 端口 9005，Nacos 注册名 plan-service
+# 职责：应急预案模板管理 / AI 智能预案生成（失败降级模板实例化） /
+#       预案执行状态机与任务推进 / 工单派单联动 / 处置反馈回写
+# ============================================================
+server:
+  port: 9005
+
+spring:
+  application:
+    name: plan-service
+  datasource:
+    url: jdbc:postgresql://${PG_HOST:localhost}:${PG_PORT:5432}/lifeline
+    username: ${PG_USER:lifeline}
+    password: ${PG_PASSWORD:lifeline123}
+    driver-class-name: org.postgresql.Driver
+  # Spring Boot 3.x 下 Redis 配置前缀为 spring.data.redis
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  kafka:
+    bootstrap-servers: ${KAFKA_SERVERS:localhost:9092}
+    consumer:
+      group-id: lifeline-plan-group
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      max-poll-records: 500
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: DEFAULT_GROUP
+
+# JWT 校验配置（lifeline-common-security 的 JwtAuthFilter 使用，与签发密钥保持一致）
+lifeline:
+  security:
+    jwt:
+      secret: ${LIFELINE_JWT_SECRET:lifeline-platform-secret-key-2026-must-be-at-least-256-bits-long}
+      issuer: lifeline-platform
+  # 预案处置服务业务参数
+  plan:
+    # 处置反馈事件幂等去重键 TTL（分钟）
+    idempotent-ttl-minutes: 10
+
+mybatis-plus:
+  mapper-locations: classpath:/mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.tianxin.lifeline.plan: info
