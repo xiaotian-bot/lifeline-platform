@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tianxin.lifeline.auth.mapper.SysRoleMapper">
+
+    <!--
+      查询用户绑定的角色。
+      本平台未设独立用户-角色关联表，用户与角色通过
+      sys_user.dept_id = sys_role.id + 7000 的约定绑定
+      （种子数据：dept_id 9001-9005 对应角色 2001-2005）。
+    -->
+    <select id="selectRolesByUserId" resultType="com.tianxin.lifeline.auth.entity.SysRole">
+        SELECT r.id, r.role_name, r.role_key, r.sort_order, r.status,
+               r.created_at, r.updated_at, r.deleted
+        FROM sys_user u
+        JOIN sys_role r ON r.id = (u.dept_id - 7000) AND r.deleted = 0
+        WHERE u.id = #{userId}
+          AND u.deleted = 0
+          AND r.status = 1
+        ORDER BY r.sort_order
+    </select>
+
+    <!-- 按角色编码查询启用的角色 -->
+    <select id="selectByRoleKey" resultType="com.tianxin.lifeline.auth.entity.SysRole">
+        SELECT id, role_name, role_key, sort_order, status, created_at, updated_at, deleted
+        FROM sys_role
+        WHERE role_key = #{roleKey}
+          AND deleted = 0
+        LIMIT 1
+    </select>
+</mapper>
