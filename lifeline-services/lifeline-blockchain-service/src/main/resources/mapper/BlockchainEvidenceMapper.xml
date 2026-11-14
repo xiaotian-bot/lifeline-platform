@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tianxin.lifeline.blockchain.mapper.BlockchainEvidenceMapper">
+
+    <!-- 通用字段列表 -->
+    <sql id="Base_Column_List">
+        id, evidence_hash, evidence_type, related_id, related_type, content,
+        chain_status, chain_time, created_at, updated_at, deleted
+    </sql>
+
+    <!-- 按关联业务对象ID查询存证时间线（上链时间倒序，链上环节全景） -->
+    <select id="selectTimelineByRelatedId" resultType="com.tianxin.lifeline.blockchain.entity.BlockchainEvidence">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM blockchain_evidence
+        WHERE related_id = #{relatedId}
+          AND deleted = 0
+        ORDER BY chain_time DESC NULLS LAST, created_at DESC
+    </select>
+
+    <!-- 按存证哈希查询记录（哈希唯一性校验/按哈希溯源） -->
+    <select id="selectByEvidenceHash" resultType="com.tianxin.lifeline.blockchain.entity.BlockchainEvidence">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM blockchain_evidence
+        WHERE evidence_hash = #{evidenceHash}
+          AND deleted = 0
+        ORDER BY created_at ASC
+        LIMIT 1
+    </select>
+</mapper>
