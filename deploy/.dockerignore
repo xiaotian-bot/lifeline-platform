@@ -1,0 +1,7 @@
+sql/*
+nginx/*
+scripts/*
+docs/*
+*.md
+*.sh
+flink-jobs/*
