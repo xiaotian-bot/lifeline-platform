@@ -1,0 +1,67 @@
+# ============================================================
+# 区块链存证服务（blockchain-service）配置
+# 端口 9008，Nacos 注册名 blockchain-service
+# 职责：管网 DID 数字身份注册 / 全环节存证上链（PG 模拟账本） /
+#       存证溯源时间线 / 防篡改校验
+# ============================================================
+server:
+  port: 9008
+
+spring:
+  application:
+    name: blockchain-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/lifeline
+    username: lifeline
+    password: lifeline123
+    driver-class-name: org.postgresql.Driver
+  # Spring Boot 3.x 下 Redis 配置前缀为 spring.data.redis
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:kafka:9094}
+    consumer:
+      group-id: lifeline-blockchain-group
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      max-poll-records: 500
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: DEFAULT_GROUP
+
+# JWT 校验配置（lifeline-common-security 的 JwtAuthFilter 使用，与签发密钥保持一致）
+lifeline:
+  security:
+    jwt:
+      secret: ${LIFELINE_JWT_SECRET:lifeline-platform-secret-key-2026-must-be-at-least-256-bits-long}
+      issuer: lifeline-platform
+  # 区块链存证服务业务参数
+  blockchain:
+    # 账本适配器：pg=PG模拟账本（默认） / fabric=Hyperledger Fabric 2.5（占位，后续接入）
+    adapter: ${BLOCKCHAIN_ADAPTER:pg}
+    # 存证请求事件幂等去重键 TTL（分钟）
+    idempotent-ttl-minutes: 10
+
+mybatis-plus:
+  mapper-locations: classpath:/mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.tianxin.lifeline.blockchain: info
