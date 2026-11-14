@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tianxin.lifeline.blockchain.mapper.BlockchainDidMapper">
+
+    <!-- 通用字段列表 -->
+    <sql id="Base_Column_List">
+        id, did, pipe_id, pipe_code, created_at, updated_at, deleted
+    </sql>
+
+    <!-- 按管网ID查询有效DID（幂等判断） -->
+    <select id="selectByPipeId" resultType="com.tianxin.lifeline.blockchain.entity.BlockchainDid">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM blockchain_did
+        WHERE pipe_id = #{pipeId}
+          AND deleted = 0
+        ORDER BY created_at ASC
+        LIMIT 1
+    </select>
+
+    <!-- 按DID标识查询记录（溯源入口） -->
+    <select id="selectByDid" resultType="com.tianxin.lifeline.blockchain.entity.BlockchainDid">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM blockchain_did
+        WHERE did = #{did}
+          AND deleted = 0
+        LIMIT 1
+    </select>
+</mapper>
