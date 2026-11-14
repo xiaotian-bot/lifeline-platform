@@ -1,0 +1,3 @@
+com.tianxin.lifeline.common.mq.config.KafkaProducerConfig
+com.tianxin.lifeline.common.mq.config.KafkaConsumerConfig
+com.tianxin.lifeline.common.mq.template.KafkaEventTemplate
