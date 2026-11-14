@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.tianxin.lifeline</groupId>
+        <artifactId>lifeline-services</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>lifeline-monitor-data-service</artifactId>
+
+    <name>lifeline-monitor-data-service</name>
+    <description>监测数据服务：消费pipe_sensor_raw原始传感数据，清洗后写入TDengine/PostgreSQL/Redis，提供实时/历史/统计查询（端口9003）</description>
+
+    <dependencies>
+        <!-- Web 容器与 REST 接口 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <!-- Redis 实时缓存 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <!-- WebSocket 实时推送（/ws/monitor/{areaId}，P10-3） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+        <!-- Kafka 消费 -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+
+        <!-- 平台公共核心：常量/统一响应体/异常 -->
+        <dependency>
+            <groupId>com.tianxin.lifeline</groupId>
+            <artifactId>lifeline-common-core</artifactId>
+        </dependency>
+        <!-- 平台公共安全：JWT解析（WebSocket握手鉴权） -->
+        <dependency>
+            <groupId>com.tianxin.lifeline</groupId>
+            <artifactId>lifeline-common-security</artifactId>
+        </dependency>
+        <!-- Actuator：WebSocket 健康端点 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <!-- 平台公共Web：全局异常处理/Jackson配置 -->
+        <dependency>
+            <groupId>com.tianxin.lifeline</groupId>
+            <artifactId>lifeline-common-web</artifactId>
+        </dependency>
+        <!-- 平台公共数据：MyBatis-Plus配置/Redis序列化配置 -->
+        <dependency>
+            <groupId>com.tianxin.lifeline</groupId>
+            <artifactId>lifeline-common-data</artifactId>
+        </dependency>
+        <!-- 平台公共MQ：Kafka配置模板 -->
+        <dependency>
+            <groupId>com.tianxin.lifeline</groupId>
+            <artifactId>lifeline-common-mq</artifactId>
+        </dependency>
+
+        <!-- Nacos 服务发现 -->
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+        </dependency>
+        <!-- TDengine JDBC 驱动（RESTful模式，独立JdbcTemplate访问） -->
+        <dependency>
+            <groupId>com.taosdata.jdbc</groupId>
+            <artifactId>taos-jdbcdriver</artifactId>
+        </dependency>
+        <!-- PostgreSQL 驱动（主数据源） -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+        </dependency>
+        <!-- MyBatis-Plus for Spring Boot 3 -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>lifeline-monitor-data-service</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
