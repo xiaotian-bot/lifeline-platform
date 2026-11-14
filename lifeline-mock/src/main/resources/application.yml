@@ -1,0 +1,44 @@
+# ============================================================
+# 安塞区城市安全生命线管网AI智慧平台 - Mock 数据模拟系统
+# 端口 9100，模拟五类管网传感器数据并上报 Kafka pipe_sensor_raw
+# ============================================================
+server:
+  port: 9100
+
+spring:
+  application:
+    name: lifeline-mock
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      batch-size: 262144
+      linger-ms: 10
+      compression-type: lz4
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+mock:
+  # 是否启用数据生成（false 时需通过 POST /api/v1/mock/start 手动启动）
+  enabled: true
+  sensor:
+    # 模拟设备总数（种子设备 10 台：DEV-{类型}-001~002）
+    count: 10
+    # 上报周期（秒）
+    report-interval-seconds: 30
+    # 管网类型短码：GAS=燃气 WAT=供水 DRN=污水 HTG=供暖 STR=危废
+    pipe-types: GAS,WAT,DRN,HTG,STR
+  anomaly:
+    # 是否自动随机触发异常场景
+    auto-trigger: false
+    # 允许自动触发的场景类型
+    types: PRESSURE_DROP,GAS_LEAK,TEMP_SPIKE,HEATING_LEAK,DRAINAGE_OVERFLOW,THIRD_PARTY_DAMAGE
+  stress:
+    # 压测模式：开启后设备数切换为 device-count，每100条合并为单条JSON Array消息
+    mode: false
+    # 压测设备数分档：10000 / 50000 / 100000
+    device-count: 10000
+
+logging:
+  level:
+    com.tianxin.lifeline.mock: INFO
+    org.apache.kafka: WARN
