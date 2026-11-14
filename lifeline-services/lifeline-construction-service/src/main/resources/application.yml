@@ -1,0 +1,77 @@
+# ============================================================
+# 施工监护服务（construction-service）配置
+# 端口 9006，Nacos 注册名 construction-service
+# 职责：施工项目/工序管理 / 项目状态机推进 / 周边管线空间影响分析 /
+#       AI 视觉质检（失败降级人工复核）/ 违规区块链存证事件投递 /
+#       MinIO 施工影像流式上传（DB 只存对象键）
+# ============================================================
+server:
+  port: 9006
+
+spring:
+  application:
+    name: construction-service
+  datasource:
+    url: jdbc:postgresql://${PG_HOST:localhost}:${PG_PORT:5432}/lifeline
+    username: ${PG_USER:lifeline}
+    password: ${PG_PASSWORD:lifeline123}
+    driver-class-name: org.postgresql.Driver
+  # Spring Boot 3.x 下 Redis 配置前缀为 spring.data.redis
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  kafka:
+    bootstrap-servers: ${KAFKA_SERVERS:localhost:9092}
+    consumer:
+      group-id: lifeline-construction-group
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      max-poll-records: 500
+  # 施工影像上传体积限制（MinIO 流式直传，不落本地磁盘）
+  servlet:
+    multipart:
+      max-file-size: ${UPLOAD_MAX_SIZE:100MB}
+      max-request-size: ${UPLOAD_MAX_SIZE:100MB}
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: DEFAULT_GROUP
+
+# JWT 校验配置（lifeline-common-security 的 JwtAuthFilter 使用，与签发密钥保持一致）
+lifeline:
+  security:
+    jwt:
+      secret: ${LIFELINE_JWT_SECRET:lifeline-platform-secret-key-2026-must-be-at-least-256-bits-long}
+      issuer: lifeline-platform
+  # MinIO 对象存储（施工影像桶，DB 只存对象键）
+  minio:
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    access-key: ${MINIO_ACCESS_KEY:minioadmin}
+    secret-key: ${MINIO_SECRET_KEY:minioadmin123}
+    bucket: ${MINIO_CONSTRUCTION_BUCKET:lifeline-construction}
+  # 施工监护服务业务参数
+  construction:
+    # 人工违规上报幂等去重键 TTL（分钟）
+    idempotent-ttl-minutes: 1
+
+mybatis-plus:
+  mapper-locations: classpath:/mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.tianxin.lifeline.construction: info
