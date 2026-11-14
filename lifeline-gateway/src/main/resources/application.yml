@@ -1,0 +1,44 @@
+# ============================================================
+# 安塞区城市安全生命线管网AI智慧平台 - 统一API网关配置
+# 路由规则详见 RouteConfig.java（Java 编程式路由）
+# ============================================================
+server:
+  port: 8080
+  max-http-header-size: 524288
+
+spring:
+  application:
+    name: lifeline-gateway
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: DEFAULT_GROUP
+    gateway:
+      # 编程式路由在 RouteConfig 中定义，此处配置全局默认行为
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
+      httpclient:
+        connect-timeout: 5000
+        response-timeout: 30s
+
+# JWT 安全配置（与 sys-auth-service 签发密钥保持一致）
+lifeline:
+  security:
+    jwt:
+      secret: ${LIFELINE_JWT_SECRET:lifeline-platform-secret-key-2026-must-be-at-least-256-bits-long}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.tianxin.lifeline.gateway: info
+    org.springframework.cloud.gateway: info
