@@ -1,0 +1,70 @@
+# ============================================================
+# AI能力网关服务（ai-gateway-service）配置
+# 端口 9009，Nacos 注册名 ai-gateway-service
+# 职责：统一转发 ml-service/agent-service 的 AI 能力（异常检测/预报/研判/预案/问答），
+#       结果缓存（Redis 5min）、超时降级、批量推理、forecast 直写 PG
+# ============================================================
+server:
+  port: 9009
+
+spring:
+  application:
+    name: ai-gateway-service
+  # 本服务为 WebFlux 响应式栈（显式声明，防止类路径变化导致误判）
+  main:
+    web-application-type: reactive
+  # Spring Boot 3.x 下 Redis 配置前缀为 spring.data.redis
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2s
+  # forecast_report 直写 PostgreSQL（独立 JdbcTemplate，失败仅 warn 不影响响应）
+  datasource:
+    url: jdbc:postgresql://${PG_HOST:localhost}:${PG_PORT:5432}/lifeline
+    username: ${PG_USER:lifeline}
+    password: ${PG_PASSWORD:lifeline123}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: DEFAULT_GROUP
+
+# AI 网关业务参数
+lifeline:
+  ai:
+    ml-service:
+      # Python ml-service（FastAPI）上游地址
+      url: ${AI_ML_SERVICE_URL:http://localhost:8000}
+    agent-service:
+      # Python agent-service（LangGraph）上游地址
+      url: ${AI_AGENT_SERVICE_URL:http://localhost:8001}
+    # 各能力调用超时（毫秒），分级设置：检测快、预报/Agent 慢
+    timeout:
+      detect-ms: 5000
+      forecast-ms: 30000
+      agent-ms: 60000
+      health-ms: 2000
+    # 结果缓存配置
+    cache:
+      enabled: true
+      ttl-seconds: 300
+      key-prefix: "lifeline:ai:cache:"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.tianxin.lifeline.aigateway: info
