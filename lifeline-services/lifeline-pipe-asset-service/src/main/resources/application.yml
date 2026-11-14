@@ -1,0 +1,51 @@
+# ============================================================
+# 管网资产服务（pipe-asset-service）配置
+# 端口 9011，管网/设备/井室台账 + PostGIS 空间查询
+# 端口从 9002 改为 9011，避免与 MinIO Console 端口冲突
+# ============================================================
+server:
+  port: 9011
+
+spring:
+  application:
+    name: pipe-asset-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/lifeline
+    username: lifeline
+    password: lifeline123
+    driver-class-name: org.postgresql.Driver
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: DEFAULT_GROUP
+
+# JWT 校验配置（lifeline-common-security 的 JwtAuthFilter 使用，与签发密钥保持一致）
+lifeline:
+  security:
+    jwt:
+      secret: ${LIFELINE_JWT_SECRET:lifeline-platform-secret-key-2026-must-be-at-least-256-bits-long}
+      issuer: lifeline-platform
+
+mybatis-plus:
+  mapper-locations: classpath:/mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.tianxin.lifeline.asset: info
