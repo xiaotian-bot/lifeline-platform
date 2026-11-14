@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tianxin.lifeline.auth.mapper.SysPermissionMapper">
+
+    <!-- 权限列 -->
+    <sql id="permColumns">
+        p.id, p.perm_name, p.perm_key, p.type, p.parent_id, p.path,
+        p.icon, p.sort_order, p.created_at, p.updated_at, p.deleted
+    </sql>
+
+    <!--
+      查询用户拥有的全部权限。
+      关联链：sys_user → sys_role（dept_id = role.id + 7000） → sys_role_permission → sys_permission
+    -->
+    <select id="selectPermissionsByUserId" resultType="com.tianxin.lifeline.auth.entity.SysPermission">
+        SELECT DISTINCT
+        <include refid="permColumns"/>
+        FROM sys_user u
+        JOIN sys_role r ON r.id = (u.dept_id - 7000) AND r.deleted = 0 AND r.status = 1
+        JOIN sys_role_permission rp ON rp.role_id = r.id AND rp.deleted = 0
+        JOIN sys_permission p ON p.id = rp.permission_id AND p.deleted = 0
+        WHERE u.id = #{userId}
+          AND u.deleted = 0
+        ORDER BY p.sort_order
+    </select>
+
+    <!-- 查询角色集合拥有的全部权限 -->
+    <select id="selectPermissionsByRoleIds" resultType="com.tianxin.lifeline.auth.entity.SysPermission">
+        SELECT DISTINCT
+        <include refid="permColumns"/>
+        FROM sys_role_permission rp
+        JOIN sys_permission p ON p.id = rp.permission_id AND p.deleted = 0
+        WHERE rp.deleted = 0
+          AND rp.role_id IN
+        <foreach collection="roleIds" item="roleId" open="(" separator="," close=")">
+            #{roleId}
+        </foreach>
+        ORDER BY p.sort_order
+    </select>
+</mapper>
