@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tianxin.lifeline.asset.mapper.ManholeMapper">
+
+    <!-- 通用列：经纬度经 ST_X/ST_Y 提取 -->
+    <sql id="baseColumns">
+        id, manhole_code, manhole_type, diameter, depth, status,
+        ST_AsText(geom) AS geom_wkt, ST_X(geom) AS longitude, ST_Y(geom) AS latitude,
+        created_at, updated_at, deleted
+    </sql>
+
+    <!-- 分页查询井室：LIMIT/OFFSET 与 COUNT 总数由 MyBatis-Plus 分页拦截器自动织入 -->
+    <select id="selectManholePage" resultType="com.tianxin.lifeline.asset.entity.Manhole">
+        SELECT <include refid="baseColumns"/>
+        FROM manhole
+        <where>
+            deleted = 0
+            <if test="manholeType != null and manholeType != ''">
+                AND manhole_type = #{manholeType}
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND manhole_code LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+        ORDER BY created_at DESC, id DESC
+    </select>
+
+    <!-- 查询与指定管网空间邻近的井室（ST_DWithin 按 geography 计算球面距离，单位：米） -->
+    <select id="selectNearPipe" resultType="com.tianxin.lifeline.asset.entity.Manhole">
+        SELECT <include refid="baseColumns"/>
+        FROM manhole m
+        WHERE m.deleted = 0
+          AND m.geom IS NOT NULL
+          AND EXISTS (
+              SELECT 1
+              FROM pipe_main p
+              WHERE p.id = #{pipeId}
+                AND p.deleted = 0
+                AND p.geom IS NOT NULL
+                AND ST_DWithin(p.geom::geography, m.geom::geography, #{radius})
+          )
+        ORDER BY m.id
+    </select>
+</mapper>
