@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tianxin.lifeline.asset.mapper.PipeMainMapper">
+
+    <!-- 通用列（geom 经 ST_AsText 输出为 WKT 文本） -->
+    <sql id="baseColumns">
+        id, pipe_code, pipe_name, pipe_type, diameter, material, length, depth,
+        install_date, status, ST_AsText(geom) AS geom_wkt, created_at, updated_at, deleted
+    </sql>
+
+    <!-- 分页查询管网：LIMIT/OFFSET 与 COUNT 总数由 MyBatis-Plus 分页拦截器自动织入 -->
+    <select id="selectPipePage" resultType="com.tianxin.lifeline.asset.entity.PipeMain">
+        SELECT <include refid="baseColumns"/>
+        FROM pipe_main
+        <where>
+            deleted = 0
+            <if test="pipeType != null and pipeType != ''">
+                AND pipe_type = #{pipeType}
+            </if>
+            <if test="area != null and area != ''">
+                AND (pipe_name LIKE CONCAT('%', #{area}, '%') OR pipe_code LIKE CONCAT('%', #{area}, '%'))
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+        ORDER BY created_at DESC, id DESC
+    </select>
+
+    <!-- 查询管网详情（含 WKT） -->
+    <select id="selectDetailById" resultType="com.tianxin.lifeline.asset.entity.PipeMain">
+        SELECT <include refid="baseColumns"/>
+        FROM pipe_main
+        WHERE id = #{id}
+          AND deleted = 0
+    </select>
+
+    <!-- 新增管网（几何经 ST_GeomFromText 写入，EPSG:4326） -->
+    <insert id="insertPipe">
+        INSERT INTO pipe_main (id, pipe_code, pipe_name, pipe_type, diameter, material,
+                               length, depth, install_date, status, geom,
+                               created_at, updated_at, deleted)
+        VALUES (#{id}, #{pipeCode}, #{pipeName}, #{pipeType}, #{diameter}, #{material},
+                #{length}, #{depth}, #{installDate}, #{status},
+                ST_GeomFromText(#{geomWkt}, 4326),
+                #{createdAt}, #{updatedAt}, 0)
+    </insert>
+
+    <!-- 更新管网（仅更新非空字段；geomWkt 非空时经 ST_GeomFromText 重写几何） -->
+    <update id="updatePipe">
+        UPDATE pipe_main
+        <set>
+            <if test="pipeCode != null">pipe_code = #{pipeCode},</if>
+            <if test="pipeName != null">pipe_name = #{pipeName},</if>
+            <if test="pipeType != null">pipe_type = #{pipeType},</if>
+            <if test="diameter != null">diameter = #{diameter},</if>
+            <if test="material != null">material = #{material},</if>
+            <if test="length != null">length = #{length},</if>
+            <if test="depth != null">depth = #{depth},</if>
+            <if test="installDate != null">install_date = #{installDate},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="geomWkt != null and geomWkt != ''">geom = ST_GeomFromText(#{geomWkt}, 4326),</if>
+            updated_at = #{updatedAt}
+        </set>
+        WHERE id = #{id}
+          AND deleted = 0
+    </update>
+
+    <!-- 查询管网空间数据（GeoJSON），properties 所需字段一并输出 -->
+    <select id="selectGeoJsonList" resultType="com.tianxin.lifeline.asset.entity.PipeMain">
+        SELECT id, pipe_code, pipe_name, pipe_type, status,
+               ST_AsGeoJSON(geom) AS geom_geo_json
+        FROM pipe_main
+        <where>
+            deleted = 0
+            <if test="pipeType != null and pipeType != ''">
+                AND pipe_type = #{pipeType}
+            </if>
+        </where>
+        ORDER BY id
+    </select>
+
+    <!-- 按管网类型查询列表（供 Feign 调用，含 WKT） -->
+    <select id="selectByType" resultType="com.tianxin.lifeline.asset.entity.PipeMain">
+        SELECT <include refid="baseColumns"/>
+        FROM pipe_main
+        WHERE pipe_type = #{pipeType}
+          AND deleted = 0
+        ORDER BY id
+    </select>
+</mapper>
