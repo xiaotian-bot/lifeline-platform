@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tianxin.lifeline.plan.mapper.PlanInstanceMapper">
+
+    <!-- 预案实例查询公共列（plan_instance 自身字段） -->
+    <sql id="instanceColumns">
+        pi.id, pi.instance_code, pi.plan_name, pi.template_id, pi.warning_event_id,
+        pi.status, pi.source, pi.generated_by, pi.suggestion, pi.escalation_level,
+        pi.start_time, pi.end_time, pi.created_at, pi.updated_at, pi.deleted
+    </sql>
+
+    <!--
+        实例详情多表关联：plan_instance LEFT JOIN plan_template
+        回填模板名称与场景类型。模板侧 status 与实例侧 status 同名，
+        故仅取模板的 template_name / scenario_type 两列，避免列名歧义。
+    -->
+    <select id="selectInstanceDetail" resultType="com.tianxin.lifeline.plan.dto.PlanInstanceVO">
+        SELECT
+        <include refid="instanceColumns"/>,
+        pt.template_name,
+        pt.scenario_type
+        FROM plan_instance pi
+        LEFT JOIN plan_template pt
+               ON pt.id = pi.template_id AND pt.deleted = 0
+        WHERE pi.deleted = 0
+          AND pi.id = #{id}
+    </select>
+
+    <!--
+        任务进度聚合统计：按任务状态分组统计指定实例的任务数量。
+        注意：resultType=Map 时键名为 SQL 列别名 group_key / cnt
+        （PostgreSQL 未加引号标识符折叠为小写），Java 侧须按
+        row.get("group_key") / row.get("cnt") 取值。
+    -->
+    <select id="countTaskGroupByStatus" resultType="java.util.Map">
+        SELECT status AS group_key, COUNT(*) AS cnt
+        FROM plan_task
+        WHERE deleted = 0
+          AND instance_id = #{instanceId}
+        GROUP BY status
+        ORDER BY status
+    </select>
+
+    <!--
+        按预警事件ID查询关联预案实例（供处置反馈回写定位执行中实例），
+        status 可空，空则不按状态过滤。
+    -->
+    <select id="selectByWarningEventId" resultType="com.tianxin.lifeline.plan.entity.PlanInstance">
+        SELECT
+        <include refid="instanceColumns"/>
+        FROM plan_instance pi
+        WHERE pi.deleted = 0
+          AND pi.warning_event_id = #{warningEventId}
+        <if test="status != null">
+            AND pi.status = #{status}
+        </if>
+        ORDER BY pi.created_at DESC
+    </select>
+</mapper>
