@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tianxin.lifeline.operation.mapper.OperationOrderMapper">
+
+    <!-- 工单查询公共列 -->
+    <sql id="baseColumns">
+        id, order_code, title, order_type, warning_event_id, device_id, pipe_id,
+        assignee, status, priority, content, result, start_time, end_time,
+        area_id, source, created_at, updated_at, deleted
+    </sql>
+
+    <!-- 工单查询公共过滤条件 -->
+    <sql id="filterConditions">
+        deleted = 0
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        <if test="orderType != null and orderType != ''">
+            AND order_type = #{orderType}
+        </if>
+        <if test="warningEventId != null">
+            AND warning_event_id = #{warningEventId}
+        </if>
+        <if test="assignee != null and assignee != ''">
+            AND assignee = #{assignee}
+        </if>
+        <if test="priority != null">
+            AND priority = #{priority}
+        </if>
+        <if test="startTime != null and startTime != ''">
+            AND created_at &gt;= CAST(#{startTime} AS timestamp)
+        </if>
+        <if test="endTime != null and endTime != ''">
+            AND created_at &lt;= CAST(#{endTime} AS timestamp)
+        </if>
+    </sql>
+
+    <!-- 排序子句：默认红色预警应急工单（source=WARNING 且 priority=1）置顶，
+         其次优先级升序、创建时间降序；orderBy 白名单键由服务层校验后传入 -->
+    <sql id="orderClause">
+        <choose>
+            <when test="orderBy == 'priority'">
+                ORDER BY priority ASC NULLS LAST, created_at DESC
+            </when>
+            <when test="orderBy == 'created_at_asc'">
+                ORDER BY created_at ASC
+            </when>
+            <when test="orderBy == 'status'">
+                ORDER BY status ASC, created_at DESC
+            </when>
+            <otherwise>
+                ORDER BY CASE WHEN source = 'WARNING' AND priority = 1 THEN 0 ELSE 1 END ASC,
+                         priority ASC NULLS LAST,
+                         created_at DESC
+            </otherwise>
+        </choose>
+    </sql>
+
+    <!-- 分页查询工单列表 -->
+    <select id="selectOrderPage" resultType="com.tianxin.lifeline.operation.entity.OperationOrder">
+        SELECT
+        <include refid="baseColumns"/>
+        FROM operation_order
+        WHERE
+        <include refid="filterConditions"/>
+        <include refid="orderClause"/>
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <!-- 统计同条件工单总数 -->
+    <select id="countOrder" resultType="long">
+        SELECT COUNT(*)
+        FROM operation_order
+        WHERE
+        <include refid="filterConditions"/>
+    </select>
+
+    <!-- 按预警事件ID查询关联工单 -->
+    <select id="selectByWarningEventId" resultType="com.tianxin.lifeline.operation.entity.OperationOrder">
+        SELECT
+        <include refid="baseColumns"/>
+        FROM operation_order
+        WHERE deleted = 0
+          AND warning_event_id = #{warningEventId}
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- 查询巡检计划派生的巡检工单（content 携带 [inspectionPlanId=计划ID] 标记） -->
+    <select id="selectInspectionTasks" resultType="com.tianxin.lifeline.operation.entity.OperationOrder">
+        SELECT
+        <include refid="baseColumns"/>
+        FROM operation_order
+        WHERE deleted = 0
+          AND order_type = 'INSPECT'
+          AND content LIKE '%[inspectionPlanId=' || #{planId} || ']%'
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- 按工单状态分组统计（groupKey：状态数值 0待派单/1待接单/2处置中/3已完成/4已关闭） -->
+    <select id="countGroupByStatus" resultType="java.util.Map">
+        SELECT status AS group_key, COUNT(*) AS cnt
+        FROM operation_order
+        WHERE deleted = 0
+        GROUP BY status
+        ORDER BY status
+    </select>
+
+    <!-- 按工单类型分组统计（groupKey：类型编码 REPAIR/INSPECT/MAINTAIN/EMERGENCY） -->
+    <select id="countGroupByOrderType" resultType="java.util.Map">
+        SELECT order_type AS group_key, COUNT(*) AS cnt
+        FROM operation_order
+        WHERE deleted = 0
+        GROUP BY order_type
+        ORDER BY order_type
+    </select>
+</mapper>
