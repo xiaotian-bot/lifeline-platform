@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tianxin.lifeline.auth.mapper.SysRolePermissionMapper">
+
+    <!-- 逻辑删除指定角色的全部权限关联（权限重分配前调用） -->
+    <update id="logicDeleteByRoleId">
+        UPDATE sys_role_permission
+        SET deleted = 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE role_id = #{roleId}
+          AND deleted = 0
+    </update>
+</mapper>
