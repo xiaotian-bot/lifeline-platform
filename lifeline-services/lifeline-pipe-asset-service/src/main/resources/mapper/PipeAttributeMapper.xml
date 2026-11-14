@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.tianxin.lifeline.asset.mapper.PipeAttributeMapper">
+
+    <!-- 通用列 -->
+    <sql id="baseColumns">
+        id, pipe_id, attr_key, attr_value, attr_unit, created_at, updated_at, deleted
+    </sql>
+
+    <!-- 按管网ID查询扩展属性 -->
+    <select id="selectByPipeId" resultType="com.tianxin.lifeline.asset.entity.PipeAttribute">
+        SELECT <include refid="baseColumns"/>
+        FROM pipe_attribute
+        WHERE pipe_id = #{pipeId}
+          AND deleted = 0
+        ORDER BY id
+    </select>
+
+    <!-- 按管网ID集合批量查询扩展属性 -->
+    <select id="selectByPipeIds" resultType="com.tianxin.lifeline.asset.entity.PipeAttribute">
+        SELECT <include refid="baseColumns"/>
+        FROM pipe_attribute
+        WHERE deleted = 0
+          AND pipe_id IN
+        <foreach collection="pipeIds" item="pipeId" open="(" separator="," close=")">
+            #{pipeId}
+        </foreach>
+        ORDER BY pipe_id, id
+    </select>
+
+    <!-- 批量插入扩展属性（id/created_at/updated_at 由应用层雪花算法与当前时间预填充） -->
+    <insert id="batchInsert">
+        INSERT INTO pipe_attribute (id, pipe_id, attr_key, attr_value, attr_unit,
+                                    created_at, updated_at, deleted)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.id}, #{item.pipeId}, #{item.attrKey}, #{item.attrValue}, #{item.attrUnit},
+             #{item.createdAt}, #{item.updatedAt}, 0)
+        </foreach>
+    </insert>
+
+    <!-- 按管网ID逻辑删除全部扩展属性（更新时全量替换） -->
+    <update id="logicDeleteByPipeId">
+        UPDATE pipe_attribute
+        SET deleted = 1,
+            updated_at = NOW()
+        WHERE pipe_id = #{pipeId}
+          AND deleted = 0
+    </update>
+</mapper>
