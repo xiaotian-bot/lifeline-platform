@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.tianxin.lifeline</groupId>
+        <artifactId>lifeline-platform-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>lifeline-bigdata</artifactId>
+    <packaging>pom</packaging>
+
+    <name>lifeline-bigdata</name>
+    <description>大数据计算聚合模块（P6 Flink 实时链路：清洗/入库/特征/规则预警；P10-1 Spark 离线计算：日统计/趋势/训练集/质量稽核）</description>
+
+    <modules>
+        <module>lifeline-flink-jobs</module>
+        <module>lifeline-spark-jobs</module>
+    </modules>
+</project>
